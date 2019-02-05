@@ -1,7 +1,11 @@
 package it.homepc.mibe.graphics;
 
+import org.apache.batik.dom.GenericDOMImplementation;
+import org.apache.batik.svggen.SVGGraphics2D;
+import org.w3c.dom.DOMImplementation;
+import org.w3c.dom.Document;
+
 import java.awt.*;
-import java.awt.font.LineMetrics;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
@@ -10,22 +14,23 @@ import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.batik.svggen.SVGGraphics2D;
-import org.apache.batik.dom.GenericDOMImplementation;
-
-import org.w3c.dom.Document;
-import org.w3c.dom.DOMImplementation;
-
 public class DefaultNumberDrawer implements NumberDrawer {
+
+    private static final int X = 0;
+    private static final int Y = 1;
 
     private static final int CANVAS_GRID_SIZE = 1024;
     private static final int DRAW_GRID_MARGIN = 32;
     private static final int DRAW_STROKE_SIZE = 4;
+    private static final int DRAW_ARC_STROKE_SIZE = 2;
     private static final int DRAW_TICS_SIZE   = 16;
 
     private Dimension dimension;
     private Map<Integer, Integer> occurenceMap;
     private int[] digits;
+    private int[] nextPointIndex = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    private double[][][] points;
+    private Color[] digitColor;
 
     DefaultNumberDrawer(String strNum) {
         int len = strNum.length();
@@ -43,6 +48,30 @@ public class DefaultNumberDrawer implements NumberDrawer {
             digits[i] = n;
             occurenceMap.put(n, occurenceMap.get(n) + 1);
         }
+
+        final double radius = (double) CANVAS_GRID_SIZE /2 - DRAW_GRID_MARGIN;
+        final double offset = (double) CANVAS_GRID_SIZE /2;
+        final int maxOccurence = getMaxOccurenceValue();
+        points = new double[10][maxOccurence][2];
+        for (int i=0; i<10; i++) {
+            for (int turn=0; turn < maxOccurence; turn++) {
+                points[i][turn][X] =   radius * Math.cos(i*2*Math.PI/10 + turn*2*Math.PI/10/maxOccurence) + offset;
+                points[i][turn][Y] = - radius * Math.sin(i*2*Math.PI/10 + turn*2*Math.PI/10/maxOccurence) + offset;
+            }
+        }
+
+        digitColor = new Color[10];
+        for(int i=0; i<10; i++) {
+            digitColor[i] = Color.getHSBColor((float) i/10, 1, 1f);
+        }
+    }
+
+    private double[] popPointForDigit(int digit) {
+        return points[digit][nextPointIndex[digit]++];
+    }
+
+    private double[] peekPointForDigit(int digit) {
+        return points[digit][nextPointIndex[digit]];
     }
 
     private int getMaxOccurenceValue() {
@@ -78,7 +107,7 @@ public class DefaultNumberDrawer implements NumberDrawer {
         // draw the text
         Font f = new Font("Monospaced", Font.BOLD, DRAW_TICS_SIZE);
         svg.setFont(f);
-        getDigitPositions(svg, f).forEach( (i, point) -> svg.drawString(i+"", point[0], point[1]));
+        getDigitPositions(svg, f).forEach( (i, point) -> svg.drawString(i+"", point[X], point[Y]));
         return svg;
     }
 
@@ -107,7 +136,7 @@ public class DefaultNumberDrawer implements NumberDrawer {
         List<Arc2D.Double> arcs = getColorCircleSections();
         svg.setStroke(new BasicStroke(DRAW_TICS_SIZE, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER));
         for (int i=0, len=arcs.size(); i<len; i++) {
-            svg.setColor(Color.getHSBColor((float) i/10, 1, 1f));
+            svg.setColor(digitColor[i]);
             svg.draw(arcs.get(i));
         }
         return svg;
@@ -146,7 +175,20 @@ public class DefaultNumberDrawer implements NumberDrawer {
     }
 
     private SVGGraphics2D drawArcs(SVGGraphics2D svg) {
-
+        GradientPaint gradient;
+        for (int i=0, len = digits.length-1; i<len; i++) {
+            double[] pointStart = popPointForDigit(digits[i]);
+            double[] pointEnd   = peekPointForDigit(digits[i+1]);
+            gradient = new GradientPaint((float)pointStart[X], (float)pointStart[Y], digitColor[digits[i]], (float)pointEnd[X], (float)pointEnd[Y], digitColor[digits[i+1]]);
+            svg.setPaint(gradient);
+            svg.setStroke(new BasicStroke(DRAW_ARC_STROKE_SIZE));
+            svg.draw(new Line2D.Double(
+                    pointStart[X],
+                    pointStart[Y],
+                    pointEnd[X],
+                    pointEnd[Y]
+            ));
+        }
         return svg;
     }
 
