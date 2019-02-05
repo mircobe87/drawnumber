@@ -1,5 +1,9 @@
 package it.homepc.mibe.graphics;
 
+import it.homepc.mibe.graphics.algebra.InfiniteSolutionException;
+import it.homepc.mibe.graphics.algebra.Line;
+import it.homepc.mibe.graphics.algebra.NoSolutionException;
+import it.homepc.mibe.graphics.algebra.Point;
 import org.apache.batik.dom.GenericDOMImplementation;
 import org.apache.batik.svggen.SVGGraphics2D;
 import org.w3c.dom.DOMImplementation;
@@ -182,14 +186,101 @@ public class DefaultNumberDrawer implements NumberDrawer {
             gradient = new GradientPaint((float)pointStart[X], (float)pointStart[Y], digitColor[digits[i]], (float)pointEnd[X], (float)pointEnd[Y], digitColor[digits[i+1]]);
             svg.setPaint(gradient);
             svg.setStroke(new BasicStroke(DRAW_ARC_STROKE_SIZE));
-            svg.draw(new Line2D.Double(
-                    pointStart[X],
-                    pointStart[Y],
-                    pointEnd[X],
-                    pointEnd[Y]
-            ));
+            svg.draw(computeArc(pointStart, pointEnd));
         }
         return svg;
+    }
+
+    private Shape computeArc(double[] startPoint, double[] endPoint) {
+        Point center = new Point((float)CANVAS_GRID_SIZE/2, (float)CANVAS_GRID_SIZE/2);
+        Point p0 = new Point((float)startPoint[X], (float)startPoint[Y]);
+        Point p1 = new Point((float)endPoint[X], (float)endPoint[Y]);
+
+        Line constrLine0 = new Line(center, p0).getParpendicular(p0);
+        Line constrLine1 = new Line(center, p1).getParpendicular(p1);
+
+        try {
+            Point arcCenter = constrLine0.intersection(constrLine1);
+            float arcRadius = arcCenter.distanceOf(p0);
+            Rectangle2D arcBBox = new Rectangle2D.Float(
+                    arcCenter.getX()-arcRadius,
+                    arcCenter.getY()-arcRadius,
+                    2*arcRadius,
+                    2*arcRadius
+            );
+            float startAlpha = normalizeCorner(arcCenter, p0);
+            float endAlpha   = normalizeCorner(arcCenter, p1);
+            float delta = computeCornerExtend(startAlpha, endAlpha);
+
+            return new Arc2D.Float(
+                    arcBBox,
+                    startAlpha,
+                    delta,
+                    Arc2D.OPEN
+            );
+
+        } catch (Exception e) {
+            return new Line2D.Float(p0.getX(), p0.getY(), p1.getX(), p1.getY());
+        }
+    }
+
+//    private float normalizeCorner(Point center, Point p) {
+//        Line constrLine = new Line(center, p);
+//        float startAlpha;
+//        if (p.getY()-center.getY() >= 0) {
+//            // I or II
+//            if (p.getX()-center.getX() >= 0) {
+//                // I
+//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI;
+//            } else {
+//                // II
+//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 180f;
+//            }
+//        } else {
+//            // III or IV
+//            if (p.getX()-center.getX() >= 0) {
+//                // IV
+//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 360f;
+//            } else {
+//                // III
+//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 180f;
+//            }
+//        }
+//        return startAlpha;
+//    }
+
+    private float normalizeCorner(Point center, Point p) {
+        Line constrLine = new Line(center, p);
+        float startAlpha;
+        if (p.getY()-center.getY() >= 0) {
+            // I or II
+            if (p.getX()-center.getX() >= 0) {
+                // I
+                startAlpha = 360f - (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI;
+            } else {
+                // II
+                startAlpha = - (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 180f;
+            }
+        } else {
+            // III or IV
+            if (p.getX()-center.getX() >= 0) {
+                // IV
+                startAlpha = - (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI;
+            } else {
+                // III
+                startAlpha = 180f - (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI;
+            }
+        }
+        return startAlpha;
+    }
+
+    private float computeCornerExtend(float start, float end) {
+        if (Math.abs(end-start) > 180) {
+            return Math.signum(start-end) * (360 - Math.abs(end-start));
+        } else {
+            return end - start;
+
+        }
     }
 
     @Override
