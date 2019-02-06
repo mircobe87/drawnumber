@@ -20,7 +20,7 @@ public class OutputUtils {
 
     public static InputStream save(SVGGraphics2D graphics) throws SVGGraphics2DIOException {
         Element root = graphics.getRoot();
-        root.setAttributeNS(null, "viewBox", String.format("0 0 %f %f", graphics.getSVGCanvasSize().getWidth(), graphics.getSVGCanvasSize().getHeight()));
+        root.setAttributeNS(null, "viewBox", String.format("0 0 %.0f %.0f", Math.ceil(graphics.getSVGCanvasSize().getWidth()), Math.ceil(graphics.getSVGCanvasSize().getHeight())));
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream(MEGABYTE);
         Writer out = new OutputStreamWriter(byteArrayOutputStream, StandardCharsets.UTF_8);
         graphics.stream(root, out, true, true);
