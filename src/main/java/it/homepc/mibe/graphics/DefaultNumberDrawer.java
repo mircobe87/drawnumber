@@ -1,8 +1,6 @@
 package it.homepc.mibe.graphics;
 
-import it.homepc.mibe.graphics.algebra.InfiniteSolutionException;
 import it.homepc.mibe.graphics.algebra.Line;
-import it.homepc.mibe.graphics.algebra.NoSolutionException;
 import it.homepc.mibe.graphics.algebra.Point;
 import org.apache.batik.dom.GenericDOMImplementation;
 import org.apache.batik.svggen.SVGGraphics2D;
@@ -14,8 +12,10 @@ import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
-import java.util.*;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 public class DefaultNumberDrawer implements NumberDrawer {
