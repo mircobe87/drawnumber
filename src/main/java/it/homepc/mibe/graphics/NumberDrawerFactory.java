@@ -9,7 +9,7 @@ public class NumberDrawerFactory {
     private static String inputCleaner(String numberString) {
         String out = "";
         if (numberString != null) {
-            out = numberString.replaceAll("[^0-9]", "");
+            out = numberString.replaceAll("([^0-9])", "").replace("\n", "");
         }
         return out;
     }

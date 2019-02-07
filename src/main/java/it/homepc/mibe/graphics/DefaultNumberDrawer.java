@@ -4,14 +4,19 @@ import it.homepc.mibe.graphics.algebra.Line;
 import it.homepc.mibe.graphics.algebra.Point;
 import org.apache.batik.dom.GenericDOMImplementation;
 import org.apache.batik.svggen.SVGGraphics2D;
+import org.apache.batik.svggen.SVGGraphics2DIOException;
 import org.w3c.dom.DOMImplementation;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import java.awt.*;
 import java.awt.geom.Arc2D;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Rectangle2D;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.Writer;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -224,31 +229,6 @@ public class DefaultNumberDrawer implements NumberDrawer {
         }
     }
 
-//    private float normalizeCorner(Point center, Point p) {
-//        Line constrLine = new Line(center, p);
-//        float startAlpha;
-//        if (p.getY()-center.getY() >= 0) {
-//            // I or II
-//            if (p.getX()-center.getX() >= 0) {
-//                // I
-//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI;
-//            } else {
-//                // II
-//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 180f;
-//            }
-//        } else {
-//            // III or IV
-//            if (p.getX()-center.getX() >= 0) {
-//                // IV
-//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 360f;
-//            } else {
-//                // III
-//                startAlpha = (float) Math.atan(constrLine.getM()) * 180f/(float)Math.PI + 180f;
-//            }
-//        }
-//        return startAlpha;
-//    }
-
     private float normalizeCorner(Point center, Point p) {
         Line constrLine = new Line(center, p);
         float startAlpha;
@@ -284,7 +264,7 @@ public class DefaultNumberDrawer implements NumberDrawer {
     }
 
     @Override
-    public SVGGraphics2D draw() {
+    public byte[] draw() throws SVGGraphics2DIOException {
         // Get a DOMImplementation.
         DOMImplementation domImpl = GenericDOMImplementation.getDOMImplementation();
 
@@ -301,6 +281,13 @@ public class DefaultNumberDrawer implements NumberDrawer {
         svgGenerator = drawArcs(svgGenerator);
         svgGenerator = drawGrid(svgGenerator);
 
-        return svgGenerator;
+        Element root = svgGenerator.getRoot();
+        root.setAttributeNS(null, "viewBox", String.format("0 0 %d %d", CANVAS_GRID_SIZE, CANVAS_GRID_SIZE));
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream(1024*1024);
+        Writer writer = new OutputStreamWriter(outputStream);
+        svgGenerator.stream(root, writer, true, true);
+
+        return outputStream.toByteArray();
     }
 }
