@@ -1,7 +1,8 @@
 package it.homepc.mibe.graphics;
 
-import org.apache.batik.svggen.SVGGraphics2D;
+import org.apache.batik.svggen.SVGGraphics2DIOException;
+import org.w3c.dom.Document;
 
 public interface NumberDrawer {
-    SVGGraphics2D draw();
+    byte[] draw() throws SVGGraphics2DIOException;
 }
